@@ -1,0 +1,47 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: test-summaries
+spec:
+  params:
+  - name: secret-config
+    description: Secret containing access credentials for Travis and S3
+  - name: s3-endpoint
+    description: URL of the s3 instance to connect to
+  - name: s3-bucket
+    description: name of the bucket to put files in - not an s3://... path
+  - name: s3-key-path
+    description: base 'directory' in the bucket to store the results in
+  - name: configmap-name
+    description: The configmap with the last known build ID
+  - name: configmap-key
+    description: Key in the configmap for the last known build ID
+
+  tasks:
+  - name: analyze
+    taskRef:
+      name: scrape-analyze-upload-tests
+    params:
+    - name: secret-config
+      value: $(params.secret-config)
+    - name: s3-endpoint
+      value: $(params.s3-endpoint)
+    - name: s3-bucket
+      value: $(params.s3-bucket)
+    - name: s3-key-path
+      value: $(params.s3-key-path)
+    - name: last-build-configmap
+      value: $(params.configmap-name)
+    - name: last-build-key
+      value: $(params.configmap-key)
+
+  - name: update
+    taskRef:
+      name: update-cm
+    params:
+    - name: configmap-name
+      value: $(params.configmap-name)
+    - name: configmap-key
+      value: $(params.configmap-key)
+    - name: new-value
+      value: $(tasks.analyze.results.latest-build)

@@ -1,0 +1,44 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: scrape-analyze-upload-tests
+spec:
+  params:
+  - name: secret-config
+    description: name of the secret to pull access tokens, etc. from
+  - name: s3-endpoint
+    description: URL of the s3 instance to connect to
+  - name: s3-bucket
+    description: name of the bucket to put files in - not an s3://... path
+  - name: s3-key-path
+    description: base 'directory' in the bucket to store the results in
+  - name: last-build-configmap
+    description: Name of the ConfigMap with the last known build ID
+  - name: last-build-key
+    description: Name of the key in the ConfigMap for the last known build ID
+
+  stepTemplate:
+    envFrom:
+    - secretRef:
+        name: $(params.secret-config)
+    env:
+    - name: LAST_BUILD
+      valueFrom:
+        configMapKeyRef:
+          name: $(params.last-build-configmap)
+          key: $(params.last-build-key)
+  steps:
+  - name: main
+    image: quay.io/justinkuli/grc-test-summaries:main
+    imagePullPolicy: Always
+    command: ["/test-summaries/main.py"]
+    args:
+    - --s3-endpoint=$(params.s3-endpoint)
+    - --s3-bucket=$(params.s3-bucket)
+    - --s3-key-path=$(params.s3-key-path)
+    - --last-build=$(LAST_BUILD)
+    - --latest-build-out-file=$(results.latest-build.path)
+
+  results:
+  - name: latest-build
+    description: The most recent build analyzed by this Task
