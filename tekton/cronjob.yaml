@@ -1,0 +1,32 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: daily-test-summaries
+spec:
+           # ┌───────────── minute (0 - 59)
+           # │ ┌───────────── hour (0 - 23)
+           # │ │ ┌───────────── day of the month (1 - 31)
+           # │ │ │ ┌───────────── month (1 - 12)
+           # │ │ │ │ ┌───────────── day of the week (0 - 6) (Sunday to Saturday;
+           # │ │ │ │ │                         7 is also Sunday on some systems)
+  schedule: "0 0 * * *" # daily at midnight
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: main
+            image: gcr.io/tekton-releases/dogfooding/tkn:latest
+            command: ["/usr/local/bin/tkn"]
+            args:
+            - pipeline
+            - start
+            - test-summaries
+            - --param=secret-config=# PUT YOUR CONFIG HERE
+            - --param=s3-endpoint=# PUT YOUR CONFIG HERE
+            - --param=s3-bucket=# PUT YOUR CONFIG HERE
+            - --param=s3-key-path=# PUT YOUR CONFIG HERE
+            - --param=configmap-name=# PUT YOUR CONFIG HERE
+            - --param=configmap-key=# PUT YOUR CONFIG HERE
+          restartPolicy: Never
+          serviceAccountName: pipeline
