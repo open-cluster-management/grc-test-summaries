@@ -1,0 +1,21 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: update-cm
+spec:
+  params:
+  - name: configmap-name
+    description: The configmap to update
+  - name: configmap-key
+    description: Key in the configmap to update
+  - name: new-value
+    description: New value for the key in the configmap
+  steps:
+  - name: main
+    image: quay.io/openshift/origin-cli:4.9
+    command: ["/usr/bin/oc"]
+    args:
+    - set
+    - data
+    - configmap/$(params.configmap-name)
+    - $(params.configmap-key)=$(params.new-value)
