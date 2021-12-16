@@ -25,6 +25,7 @@ def main():
         batch_size=args.get_builds_batch_size,
         delay=args.request_delay,
         initial_offset=args.initial_offset,
+        timeout=args.request_timeout,
     )
 
     if args.latest_build_out_file:
@@ -150,6 +151,12 @@ def get_args():
         type=float,
         default=1.0,
         help="A delay between requests to travis, in case it might rate-limit the script",
+    )
+    parser.add_argument(
+        "--request-timeout",
+        type=float,
+        default=16.0,
+        help="The request timeout for requests to Travis",
     )
     parser.add_argument(
         "--local-only",
