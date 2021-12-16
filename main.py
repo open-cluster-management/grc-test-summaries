@@ -179,7 +179,14 @@ def get_args():
 
 
 def get_new_build_ids(
-    repo_url, token, last_known_id, max, batch_size=25, delay=1.0, initial_offset=0
+    repo_url,
+    token,
+    last_known_id,
+    max,
+    batch_size=25,
+    delay=1.0,
+    initial_offset=0,
+    timeout=16.0,
 ):
     ids = []
     offset = initial_offset
@@ -190,20 +197,25 @@ def get_new_build_ids(
     while last_not_found_yet and (len(ids) < max):
         print(f"Getting build ids, offset={offset}")
         payload = {"limit": batch_size, "offset": offset}
-        r = requests.get(repo_url + "/builds", params=payload, headers=headers)
+        r = requests.get(
+            repo_url + "/builds", params=payload, headers=headers, timeout=timeout
+        )
 
-        if len(r.json()["builds"]) == 0:
-            last_not_found_yet = False
+        builds = r.json()["builds"]
 
-        for build in r.json()["builds"]:
+        if not builds:
+            break
+
+        for build in builds:
             id = build["id"]
+            # Note: Travis returns builds in descending order, like 10, 9, 8, 7 ...
             if id == last_known_id:
                 last_not_found_yet = False
                 break
             if build["event_type"] != "pull_request":
                 # The framework tests don't run on pull requests
                 ids.append(id)
-
+        else:
         offset += batch_size
         time.sleep(delay)
 
