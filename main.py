@@ -331,25 +331,23 @@ class BasicPattern:
         return self.domain, self.pattern, match.group().strip()
 
 
-CYPRESS_SCREENSHOT_REGEX = (
-    r"Uploading screenshot.*\/(?:@\S+\s)*(.*) - (.*) -- (.*)\.png"
-)
 # Example:
 # Uploading screenshot /opt/app-root/src/grc-ui/test-output/cypress/screenshots/Namespace_governance.spec.js/@extended @bvt RHACM4K-1725 - GRC UI [P1][Sev1][console] Namespace policy governance -- Check that policy test-namespace-policy-1639109426 is present in the policy listing (failed).png # noqa
 # group 1: RHACM4K-1725
 # group 2: GRC UI [P1][Sev1][console] Namespace policy governance
 # group 3: Check that policy test-namespace-policy-1639109426 is present in the policy listing (failed) # noqa
+CYPRESS_SCREENSHOT_REGEX = (
+    r"Uploading screenshot.*\/(?:@\S+\s)*(.*) - (.*) -- (.*)\.png"
+)
 
 
 class CypressElementDetached(BasicPattern):
     def __init__(self, domain, cause):
-        self.domain = domain
-        self.cause = cause
         detached_regex = "CypressError:.*element is detached from the DOM"
-        self.regex = re.compile(
-            f".*(?:{detached_regex})|(?:{CYPRESS_SCREENSHOT_REGEX}).*", re.M
-        )
         # Matches the specifc detached error, and also the screenshot log for extra details.
+        pattern = f"(?:{detached_regex})|(?:{CYPRESS_SCREENSHOT_REGEX})"
+
+        super().__init__(domain, pattern, cause=cause)
 
     def match(self, text):
         matches = []
@@ -369,13 +367,11 @@ class CypressElementDetached(BasicPattern):
 
 class CypressUncaughtError(BasicPattern):
     def __init__(self, domain, cause):
-        self.domain = domain
-        self.cause = cause
-        self.pattern = (
+        pattern = (
             r"Uploading screenshot .*/(.*)/An uncaught error was "
             r"detected outside of a test \(failed\).png"
         )
-        self.regex = re.compile(f".*{self.pattern}.*", re.M)
+        super().__init__(domain, pattern, cause=cause)
 
     def get_cause(self, match):
         details = match.group(1).strip()
@@ -384,8 +380,7 @@ class CypressUncaughtError(BasicPattern):
 
 class CypressFromScreenshotAutogenerate(BasicPattern):
     def __init__(self, domain):
-        self.domain = domain
-        self.regex = re.compile(CYPRESS_SCREENSHOT_REGEX, re.M)
+        super().__init__(domain, CYPRESS_SCREENSHOT_REGEX)
 
     def get_cause(self, match):
         cause = f"{match.group(1).strip()} - {match.group(2)}".strip()
@@ -395,13 +390,14 @@ class CypressFromScreenshotAutogenerate(BasicPattern):
 
 class GinkgoFailAutogenerate(BasicPattern):
     def __init__(self, domain):
-        self.domain = domain
-        self.regex = re.compile(r"^\[Fail\]\s*(\S*)\s*(.*)\s\[It\]\s(.*)", re.M)
+        super().__init__(domain, "")
+
         # Example:
         # [Fail]  RHACM4K-1274/RHACM4K-1282 GRC: [P1][Sev1][policy-grc] Test community/policy-gatekeeper-sample [It] Creating an invalid ns should generate a violation message # noqa
         # group 1: RHACM4K-1274/RHACM4K-1282
         # group 2: GRC: [P1][Sev1][policy-grc] Test community/policy-gatekeeper-sample
         # group 3: Creating an invalid ns should generate a violation message
+        self.regex = re.compile(r"^\[Fail\]\s*(\S*)\s*(.*)\s\[It\]\s(.*)", re.M)
 
     def get_cause(self, match):
         cause = f"{match.group(1).strip()} {match.group(2)}".strip()
@@ -411,13 +407,14 @@ class GinkgoFailAutogenerate(BasicPattern):
 
 class MakeTargetFailAutogenerate(BasicPattern):
     def __init__(self, domain):
-        self.domain = domain
-        self.regex = re.compile(
-            "Makefile.*recipe for target '((?!component/test/e2e).*)' failed", re.M
-        )
+        super().__init__(domain, "")
+
         # Example:
         # Makefile:154: recipe for target 'kind-deploy-olm' failed
         # group 1: kind-deploy-olm
+        self.regex = re.compile(
+            "Makefile.*recipe for target '((?!component/test/e2e).*)' failed", re.M
+        )
 
     def get_cause(self, match):
         cause = match.group(1).strip()
