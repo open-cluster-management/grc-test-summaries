@@ -304,9 +304,12 @@ class BuildInfo:
             writer.writerow(res)
 
 
-def get_job_name(repo_name, number):
+def get_job_name(repo_name, job_number):
     if repo_name != "governance-policy-framework":
-        return f"unknown-{number}"
+        print(
+            f"WARNING: unknown repository name: {repo_name}, couldn't lookup job name"
+        )
+        return f"unknown-{job_number}"
 
     job_names = {
         1: "Patch cluster to latest",
@@ -319,10 +322,10 @@ def get_job_name(repo_name, number):
         8: "Fast forwarding GRC repos",
     }
 
-    if number in job_names:
-        return job_names[number]
-    else:
-        return f"unknown-{number}"
+    if job_number in job_names:
+        return job_names[job_number]
+    print(f"WARNING: could not find the name of job number {job_number}")
+    return f"unknown-{job_number}"
 
 
 class BasicPattern:
