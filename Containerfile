@@ -1,7 +1,6 @@
-FROM quay.io/fedora/fedora:34
+FROM quay.io/fedora/fedora:35
 
-RUN dnf upgrade -y && \
-    dnf install -y python-requests python-boto3
+RUN dnf install -y python-requests python-boto3
 
 COPY main.py /test-summaries/main.py
 
