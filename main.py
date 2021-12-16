@@ -55,7 +55,7 @@ def main():
         endpoint_url=args.s3_endpoint,
         aws_access_key_id=args.s3_access_key,
         aws_secret_access_key=args.s3_secret_key,
-        verify=False,
+        verify=(not args.skip_s3_verify),
     )
     key = f"{args.s3_key_path}/{output_name}"
 
@@ -164,6 +164,11 @@ def get_args():
         "--include-headers",
         action="store_true",
         help="If enabled, the csv headers will be prepended to the output file",
+    )
+    parser.add_argument(
+        "--skip-s3-verify",
+        action="store_true",
+        help="If enabled, the connection to S3 will not be verified",
     )
     args = parser.parse_args()
 
