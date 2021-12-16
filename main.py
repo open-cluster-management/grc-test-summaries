@@ -37,14 +37,11 @@ def main():
     else:
         output_name = f"{ids[-1]}_to_{ids[0]}.csv"
 
-    if args.generate_headers:
-        with open("headers-" + output_name, "w") as headerfile:
-            writer = csv.DictWriter(
-                headerfile, fieldnames=CSV_FIELD_NAMES, dialect="unix"
-            )
+    with open(output_name, "w") as csvfile:
+        if args.include_headers:
+            writer = csv.DictWriter(csvfile, fieldnames=CSV_FIELD_NAMES, dialect="unix")
             writer.writeheader()
 
-    with open(output_name, "w") as csvfile:
         for id in ids:
             print(f"Getting results for build id={id}")
             BuildInfo(args.travis_token, id).write_results(csvfile)
@@ -164,9 +161,9 @@ def get_args():
         help="If enabled, no data will be sent to s3",
     )
     parser.add_argument(
-        "--generate-headers",
+        "--include-headers",
         action="store_true",
-        help="If enabled, a local-only file with the csv headers will be generated",
+        help="If enabled, the csv headers will be prepended to the output file",
     )
     args = parser.parse_args()
 
@@ -223,8 +220,8 @@ def get_new_build_ids(
                 # The framework tests don't run on pull requests
                 ids.append(id)
         else:
-        offset += batch_size
-        time.sleep(delay)
+            offset += batch_size
+            time.sleep(delay)
 
     if len(ids) >= max:
         print(
