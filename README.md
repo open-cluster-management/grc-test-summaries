@@ -1,8 +1,10 @@
 # grc-test-summaries
 
-Script/image to scrape ACM-GRC test results from Travis, analyze them, and send the results to s3 for data visualization.
+[![Docker Repository on Quay](https://quay.io/repository/justinkuli/grc-test-summaries/status "Docker Repository on Quay")](https://quay.io/repository/justinkuli/grc-test-summaries)
 
-Image URL: `quay.io/justinkuli/grc-test-summaries`
+Script/image to scrape ACM-GRC test results from Travis, analyze them, and send the results to S3 for data visualization.
+
+Image URL: `quay.io/justinkuli/grc-test-summaries:main` 
 
 ## Deployment
 
@@ -17,7 +19,7 @@ Additionally, the `cronjob.yaml` file is a template for a cronjob that can be fi
 
 ## Development
 
-Additional data fields can be added to the `CSV_FIELD_NAMES`, they should be added to the `BuildInfo` class, and initialized in its constructor. Be sure to add it to the `res` in `BuildInfo.write_results` as well.
+Additional data fields can be added to the `CSV_FIELD_NAMES`, they should be added to the `BuildInfo` class, and initialized in its `__init__` method. Be sure to add it to the `res` in `BuildInfo.write_results` as well.
 
 If the data fields in the CSV are changed, the table schema for pulling the data from S3 will need to be updated. Try to do this sparingly.
 
