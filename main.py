@@ -42,10 +42,25 @@ def main():
             writer = csv.DictWriter(csvfile, fieldnames=CSV_FIELD_NAMES, dialect="unix")
             writer.writeheader()
 
+        headers = {
+            "Travis-API-Version": "3",
+            "Authorization": f"token {args.travis_token}",
+        }
+        payload = {"include": "job.state"}
         for id in ids:
             print(f"Getting results for build id={id}")
-            BuildInfo(args.travis_token, id).write_results(csvfile)
-            time.sleep(args.request_delay)  # Reduce changes of Travis rate-limiting
+            r = requests.get(
+                f"https://api.travis-ci.com/build/{id}",
+                params=payload,
+                headers=headers,
+                timeout=args.request_timeout,
+            )
+            build = r.json()
+
+            info = BuildInfo(build)
+            info.assign_causes(args.travis_token, args.request_timeout)
+            info.write_results(csvfile)
+            time.sleep(args.request_delay)  # Reduce chances of Travis rate-limiting
 
     if args.local_only:
         return
@@ -254,16 +269,7 @@ CSV_FIELD_NAMES = [
 
 
 class BuildInfo:
-    def __init__(self, token, build_id):
-        headers = {"Travis-API-Version": "3", "Authorization": f"token {token}"}
-        payload = {"include": "job.state"}
-        r = requests.get(
-            f"https://api.travis-ci.com/build/{build_id}",
-            params=payload,
-            headers=headers,
-        )
-        build = r.json()
-
+    def __init__(self, build):
         self.id = build["id"]
         self.number = build["number"]
         self.started_at = build["started_at"]
@@ -275,17 +281,26 @@ class BuildInfo:
         self.repo_name = build["repository"]["name"]
 
         self.failing_jobs = []
-        for i, job in enumerate(build["jobs"]):
-            if job["state"] == "failed":
-                self.failing_jobs.append(
-                    JobFail(
-                        token=token,
-                        job_id=job["id"],
-                        name=get_job_name(
-                            self.repo_name, i + 1
-                        ),  # travis numbering is from 1
-                    )
+        for i, job in enumerate(build["jobs"], start=1):  # travis numbering is from 1
+            if job["state"] != "failed":
+                continue
+            self.failing_jobs.append(
+                JobFail(
+                    job_id=job["id"],
+                    name=get_job_name(self.repo_name, i),
                 )
+            )
+
+    def assign_causes(self, token, timeout):
+        headers = {"Travis-API-Version": "3", "Authorization": f"token {token}"}
+        for job in self.failing_jobs:
+            r = requests.get(
+                f"https://api.travis-ci.com/job/{job.id}/log.txt",
+                headers=headers,
+                timeout=timeout,
+            )
+            text = re.sub(r"\x1b[^m]*m", "", r.text)  # remove ANSI escapes
+            job.assign_cause(text)
 
     def write_results(self, csvfile):
         writer = csv.DictWriter(csvfile, fieldnames=CSV_FIELD_NAMES, dialect="unix")
@@ -302,8 +317,9 @@ class BuildInfo:
             "domain": "Pass",
         }
 
-        if len(self.failing_jobs) == 0:
+        if not self.failing_jobs:
             writer.writerow(res)
+            return
 
         for j in self.failing_jobs:
             res["failing_job"] = j.name
@@ -479,25 +495,19 @@ PATTERNS = [
 
 
 class JobFail:
-    def __init__(self, token, job_id, name):
+    def __init__(self, job_id, name):
         self.id = job_id
         self.name = name
-
-        headers = {"Travis-API-Version": "3", "Authorization": f"token {token}"}
-        r = requests.get(
-            f"https://api.travis-ci.com/job/{job_id}/log.txt", headers=headers
-        )
-        text = re.sub(r"\x1b[^m]*m", "", r.text)  # remove ANSI escapes
-
-        for pattern in PATTERNS:
-            match = pattern.match(text)
-            if match is not None:
-                self.domain, self.cause, self.details = pattern.get_cause(match)
-                return
-
         self.domain = "Unknown failure"
         self.cause = "Unknown"
         self.details = "Unknown"
+
+    def assign_cause(self, log):
+        for pattern in PATTERNS:
+            match = pattern.match(log)
+            if match is not None:
+                self.domain, self.cause, self.details = pattern.get_cause(match)
+                return
 
 
 if __name__ == "__main__":
