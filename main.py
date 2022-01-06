@@ -15,7 +15,7 @@ import requests
 def main():
     args = get_args()
 
-    repo_slug = quote_plus("open-cluster-management/governance-policy-framework")
+    repo_slug = quote_plus(args.repo)
     repo_url = f"https://api.travis-ci.com/repo/{repo_slug}"
     ids = get_new_build_ids(
         repo_url,
@@ -120,6 +120,11 @@ def get_args():
         required=True,
         type=int,
         help="Travis build id (not repo-specific) of the last known build",
+    )
+    parser.add_argument(
+        "--repo",
+        default="stolostron/governance-policy-framework",
+        help="Github repository (in org/repo format) of the Travis builds to analyze",
     )
     parser.add_argument(
         "--out-file",
