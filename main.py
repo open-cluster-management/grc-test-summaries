@@ -188,7 +188,9 @@ def get_args():
     args = parser.parse_args()
 
     if not args.travis_token:
-        sys.exit("Argument --travis-key or environment variable TRAVIS_KEY must be set")
+        sys.exit(
+            "Argument --travis-token or environment variable TRAVIS_TOKEN must be set"
+        )
     if not args.local_only:
         if not args.s3_access_key:
             sys.exit(
