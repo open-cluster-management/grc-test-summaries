@@ -451,6 +451,33 @@ class GinkgoFailAutogenerate(BasicPattern):
         return self.domain, cause, details
 
 
+class GinkgoV2FailAutogenerate(BasicPattern):
+    def __init__(self, domain):
+        super().__init__(domain, "")
+
+        # Example (multi-line):
+        # """"
+        # • [FAILED] [300.035 seconds]
+        # RHACM4K-2222 GRC: [P1][Sev1][policy-grc] Test compliance operator and scan [policy-collection, stable, BVT] # noqa
+        # /go/src/github.com/stolostron/governance-policy-framework/test/integration/policy_comp_operator_test.go:144 # noqa
+        #   Test stable/policy-e8-scan
+        #   /go/src/github.com/stolostron/governance-policy-framework/test/integration/policy_comp_operator_test.go:268 # noqa
+        #     [It] ComplianceSuite e8 scan results should be AGGREGATING
+        # """
+        # group 1: RHACM4K-2222
+        # group 2: GRC: [P1][Sev1][policy-grc] Test compliance operator and scan [policy-collection, stable, BVT] # noqa
+        # group 3: ComplianceSuite e8 scan results should be AGGREGATING
+        self.regex = re.compile(
+            r"\[FAILED\]\s.*\n([^G]\S*)?\s?(.*)(?:\n.*){,5}\n\s*\[It\]\s(.*)", re.M
+        )
+
+    def get_cause(self, match):
+        c1 = (match.group(1) or "").strip()
+        cause = f"{c1} {match.group(2)}".strip()
+        details = match.group(3).strip()
+        return self.domain, cause, details
+
+
 class MakeTargetFailAutogenerate(BasicPattern):
     def __init__(self, domain):
         super().__init__(domain, "")
@@ -496,6 +523,7 @@ PATTERNS = [
     CypressUncaughtError("UI test fail", "Cypress: Uncaught error"),
     CypressFromScreenshotAutogenerate("UI test fail"),
     GinkgoFailAutogenerate("Go test fail"),
+    GinkgoV2FailAutogenerate("Go test fail"),
     MakeTargetFailAutogenerate("Make target fail"),
 ]
 
